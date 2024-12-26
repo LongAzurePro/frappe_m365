@@ -51,8 +51,7 @@
   {
    "fieldname": "m365_sharepoint_id",
    "fieldtype": "Data",
-   "label": "M365 SharePoint ID",
-   "read_only": 1
+   "label": "M365 SharePoint ID"
   },
   {
    "fieldname": "column_break_vfjdb",
@@ -69,8 +68,7 @@
   {
    "fieldname": "m365_group_id",
    "fieldtype": "Data",
-   "label": "M365 Group ID",
-   "read_only": 1
+   "label": "M365 Group ID"
   },
   {
    "description": "an optional description for M365 Group",
@@ -117,7 +115,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-13 17:02:22.453085",
+ "modified": "2024-12-26 13:36:47.968070",
  "modified_by": "Administrator",
  "module": "Frappe M365",
  "name": "M365 Groups",

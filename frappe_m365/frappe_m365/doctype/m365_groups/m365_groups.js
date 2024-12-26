@@ -9,7 +9,8 @@ frappe.ui.form.on('M365 Groups', {
 				frm.trigger('add_connect_button');
 			}else{
 				frm.trigger('update_group_members');
-				frm.trigger('create_team')
+				frm.trigger('create_team');
+				frm.trigger('get_m365_members_on_server');
 			}
 		}
 	},
@@ -79,6 +80,23 @@ frappe.ui.form.on('M365 Groups', {
 					doc: frm.doc,
 					callback: function (r) {
 						frm.reload_doc();
+					}
+				});
+			}
+		});
+	},
+	get_m365_members_on_server: function (frm) {
+		frm.add_custom_button(__("Get M365 members on Server"), function () {
+			if (frm.is_dirty()) {
+				frappe.msgprint("Please save the form first.")
+			} else {
+				frappe.call({
+					method: "get_m365_members_on_server",
+					freeze: 1,
+					freeze_message: "<h4>Please wait while we are retrieving members from M365</h4>",
+					doc: frm.doc,
+					callback: function (response) {
+						frappe.msgprint(JSON.stringify(response.message));
 					}
 				});
 			}

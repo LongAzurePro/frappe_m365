@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe_m365.utils import get_request_header, make_request
+from frappe_m365.utils import get_request_header, make_request, convert_to_identifier
 import time
 import requests
 
@@ -77,6 +77,9 @@ class M365Groups(Document):
         url = f'{self._settings.m365_graph_url}/groups'
         headers = get_request_header(self._settings)
         headers.update(ContentType)
+        self.mailnickname = convert_to_identifier(self.name)
+        frappe.msgprint(self.mailnickname)
+        self.save()
         body = {
             "description": f"{self.m365_group_description}",
             "displayName": f"{self.m365_group_name}",
@@ -307,7 +310,78 @@ class M365Groups(Document):
             else:
                 frappe.log_error("Teams Group Creation Error", response.text)
                 frappe.msgprint(response.text)
+    @frappe.whitelist()
+    def get_m365_members_on_server(self):
+        self._settings = frappe.get_single(M365)
+
+        group_id = self.m365_group_id  # Đây là ID của nhóm M365 đã tạo trước đó
+
+        url = f'{self._settings.m365_graph_url}/groups/{group_id}/members'
+
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+
+        response = requests.get(url, headers=headers)
+        response_dict = response.json()
+        
+        if response.status_code == 200 and response_dict.get('value'):
+            # frappe.msgprint(str(response_dict["value"]))
+            return response_dict["value"]
+            
+        else:
+            return []
+            # frappe.throw(f'Error: {response.text}')
+
+
 @frappe.whitelist()
-def create_m365_group_for_doc(doc):
-    frappe.msgprint(doc)
+def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=None,*args,**kwargs):
+    """
+
+    """
+    doc = eval(doc)
+    m365_members = []
+    
+    
+    group_doc = frappe.get_doc("M365 Groups",f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") if frappe.db.exists("M365 Groups", f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") else frappe.get_doc({
+            "doctype":"M365 Groups",
+            "m365_group_name":f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "",
+            "m365_group_description":f"M365 Group for " + f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "",
+            "enable":True
+    })
+    group_doc.save()
+    frappe.db.commit()
+
+    if frappe.db.exists("DocField", {"parent": doc["doctype"], "fieldname": "m365_group"}):
+        doc_obj = frappe.get_doc(doc["doctype"],doc["name"])
+        doc_obj.m365_group = group_doc
+        doc_obj.save()
+        frappe.db.commit()
+    
+    group_doc.run_m365_groups_flow()
+    group_doc.save()
+    frappe.db.commit()
+
+    if (members_doctype and members_search_field):
+        members = frappe.get_all(
+            members_doctype,
+            filters={members_search_field: doc['name']},
+            fields=['user_id']
+        )
+        # frappe.msgprint(str(members))
+        # [frappe.msgprint(str(item)) for item in members]
+        # members = [frappe.get_doc({"doctype": "M365 Groups Member","user": item["user_id"]}) for item in members]
+        for m in members:
+            if not frappe.db.exists("M365 Groups Member",m["user_id"]):
+                new_mem = frappe.get_doc({"doctype":"M365 Groups Member","user":m["user_id"]})
+                group_doc.m365_groups_member.append(new_mem)
+                # new_mem.save()
+                group_doc.save()
+                frappe.db.commit()
+        # frappe.msgprint(str(group_doc.__dict__))
+        for m in group_doc.m365_groups_member:
+            frappe.msgprint(str(m))
+
+    
+
+    frappe.msgprint(f"M365 Group created for {doc['name']}")
     pass
