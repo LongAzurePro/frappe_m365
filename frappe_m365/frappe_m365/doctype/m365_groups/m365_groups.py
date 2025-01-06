@@ -470,6 +470,70 @@ class M365Groups(Document):
             return f'User {email} is successfully removed from Group {self.m365_group_id}'
         else:
             return f'Error when removing user from this group: {remove_response.status_code} {remove_response.json()}'
+    
+    @frappe.whitelist()
+    def get_m365_admins_on_server(self):
+        self._settings = frappe.get_single(M365)
+
+        group_id = self.m365_group_id  # Đây là ID của nhóm M365 đã tạo trước đó
+
+        url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/owners"
+
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+
+        response = requests.get(url, headers=headers)
+        response_dict = response.json()
+        
+        if response.status_code == 200 and response_dict.get('value'):
+            # frappe.msgprint(str(response_dict["value"]))
+            return response_dict["value"]
+            
+        else:
+            return []
+        
+    @frappe.whitelist()
+    def promote_member_to_m365_admin(self,email):
+        user_lookup_url = f"https://graph.microsoft.com/v1.0/users/{email}"
+        # Headers cho request
+
+        self._settings = frappe.get_single(M365)
+
+        headers = get_request_header(self._settings)
+
+        # 1. Tìm ID của user từ email
+        response = requests.get(user_lookup_url, headers=headers)
+        if response.status_code == 200:
+            user_data = response.json()
+            user_id = user_data.get("id")
+            # frappe.msgprint(f"User ID: {user_id}")
+        else:
+            return f"Email {email} not found in this tenant!"
+
+        # # 2. Thêm user vào nhóm nếu chưa có
+        # add_member_url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/members/$ref"
+        member_data = {
+            "@odata.id": f"https://graph.microsoft.com/v1.0/users/{user_id}"
+        }
+
+        # response = requests.post(add_member_url, headers=headers, json=member_data)
+        # if response.status_code in [200, 204]:  # 204: No Content
+        #     frappe.msgprint("Email {email}")
+        # elif response.status_code == 400 and "already exists" in response.text:
+        #     frappe.msgprint("Người dùng đã có trong nhóm.")
+        # else:
+        #     frappe.msgprint(f"Lỗi khi thêm thành viên: {response.text}")
+
+        # 3. Thêm user vào danh sách owner (quản trị viên)
+        add_owner_url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/owners/$ref"
+        response = requests.post(add_owner_url, headers=headers, json=member_data)
+
+        if response.status_code in [200, 204]:
+            return f"Email {email} became Administrator of Group {self.m365_group_id}!"
+        else:
+            return f"Error when asigning Administrator: {response.text}"
+        
+    
 
     @frappe.whitelist()
     def sync_office_365_links(self):

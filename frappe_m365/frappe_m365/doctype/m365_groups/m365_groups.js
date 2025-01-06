@@ -102,6 +102,41 @@ frappe.ui.form.on('M365 Groups', {
 		// 		});
 		// 	}
 		// });
+
+		remove_member_from_m365 = (email) => {
+			frappe.call({
+				method: "remove_member_from_m365",
+				freeze: 1,
+				freeze_message: "<h4>Please wait while we do the action.../h4>",
+				doc: frm.doc,
+				args:{
+					email:email
+				},
+				callback: function (response) {
+					console.log(response.message);
+					frappe.msgprint(` ${JSON.stringify(response.message)} `);
+					frm.reload_doc();
+				}
+			});
+		}
+
+		promote_member_to_m365_admin = (email) => {
+			frappe.call({
+				method: "promote_member_to_m365_admin",
+				freeze: 1,
+				freeze_message: "<h4>Please wait while we do the action.../h4>",
+				doc: frm.doc,
+				args:{
+					email:email
+				},
+				callback: function (response) {
+					console.log(response.message);
+					frappe.msgprint(` ${JSON.stringify(response.message)} `);
+					frm.reload_doc();
+				}
+			});
+		}
+
 		frappe.call({
 			method: "get_m365_members_on_server",
 			freeze: 0,
@@ -121,7 +156,6 @@ frappe.ui.form.on('M365 Groups', {
 								<th>Designation</th>
 								<th>Email</th>
 								<th>Actions</th>
-								
 							</tr>
 						</thead>
 						<tbody>
@@ -135,7 +169,9 @@ frappe.ui.form.on('M365 Groups', {
 							<td>${member.displayName}</td>
 							<td>${member.jobTitle ?? ""}</td>
 							<td>${member.mail}</td>
-							<td><button onclick = "remove_member_from_m365('${member.mail}')" class = "btn btn-default">Remove from M365 Group</button></td>
+							<td><button onclick = "remove_member_from_m365('${member.mail}')" class = "btn btn-default">Remove from M365 Group</button>
+							<br><br>
+							<button onclick = "promote_member_to_m365_admin('${member.mail}')" class = "btn btn-primary">Promote to M365 Group Administrator</button></td>
 						</tr>
 					`;
 				});
