@@ -11,6 +11,7 @@ frappe.ui.form.on('M365 Groups', {
 				frm.trigger('update_group_members');
 				frm.trigger('create_team');
 				frm.trigger('get_m365_members_on_server');
+				frm.trigger('sync_office_365_links');
 			}
 		}
 	},
@@ -86,20 +87,114 @@ frappe.ui.form.on('M365 Groups', {
 		});
 	},
 	get_m365_members_on_server: function (frm) {
-		frm.add_custom_button(__("Get M365 members on Server"), function () {
-			if (frm.is_dirty()) {
-				frappe.msgprint("Please save the form first.")
-			} else {
-				frappe.call({
-					method: "get_m365_members_on_server",
-					freeze: 1,
-					freeze_message: "<h4>Please wait while we are retrieving members from M365</h4>",
-					doc: frm.doc,
-					callback: function (response) {
-						frappe.msgprint(JSON.stringify(response.message));
-					}
+		// frm.add_custom_button(__("Get M365 members on Server"), function () {
+		// 	if (frm.is_dirty()) {
+		// 		frappe.msgprint("Please save the form first.")
+		// 	} else {
+		// 		frappe.call({
+		// 			method: "get_m365_members_on_server",
+		// 			freeze: 1,
+		// 			freeze_message: "<h4>Please wait while we are retrieving members from M365</h4>",
+		// 			doc: frm.doc,
+		// 			callback: function (response) {
+		// 				frappe.msgprint(JSON.stringify(response.message));
+		// 			}
+		// 		});
+		// 	}
+		// });
+		frappe.call({
+			method: "get_m365_members_on_server",
+			freeze: 0,
+			freeze_message: "<h4>Please wait while we are retrieving members from M365</h4>",
+			doc: frm.doc,
+			callback: function (response) {
+				console.log(JSON.stringify(response.message));
+
+				const data = response.message;
+
+				let members_table_html = `
+					<table class="table table-bordered">
+						<thead>
+							<tr>
+								<th>Office 365 ID</th>
+								<th>Name</th>
+								<th>Designation</th>
+								<th>Email</th>
+								<th>Actions</th>
+								
+							</tr>
+						</thead>
+						<tbody>
+				`;
+
+				// Đổ dữ liệu vào bảng
+				data.forEach(member => {
+					members_table_html += `
+						<tr>
+							<td>${member.id}</td>
+							<td>${member.displayName}</td>
+							<td>${member.jobTitle ?? ""}</td>
+							<td>${member.mail}</td>
+							<td><button onclick = "remove_member_from_m365('${member.mail}')" class = "btn btn-default">Remove from M365 Group</button></td>
+						</tr>
+					`;
 				});
+
+				members_table_html += `
+						</tbody>
+					</table>
+				`;
+
+				// Đưa bảng HTML vào trường HTML Field
+				frm.fields_dict['members_table_html'].$wrapper.html(members_table_html);
 			}
 		});
+
+	},
+	sync_office_365_links: function (frm){
+		office_365_logo = `<img src="/assets/frappe/icons/social/office_365.svg" alt="Office 365">`
+		teams_logo = `<img src="https://upload.wikimedia.org/wikipedia/commons/c/c9/Microsoft_Office_Teams_%282018%E2%80%93present%29.svg" alt="Microsoft Team" style = "width: 30px; height: 30px">`
+		sharepoint_logo = `<img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/Microsoft_Office_SharePoint_%282019%E2%80%93present%29.svg" alt="Sharepoint" style = "width: 30px; height: 30px">`
+		outlook_logo = `<img src="https://upload.wikimedia.org/wikipedia/commons/d/df/Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg" alt="Outlook" style = "width: 30px; height: 30px">`
+		frm.add_custom_button(__(`Sync Office Links ${office_365_logo}`), function () {
+			frappe.call({
+				method: "sync_office_365_links",
+				freeze: 0,
+				freeze_message: "<h4>Please wait while we are create M365 Links...</h4>",
+				doc: frm.doc,
+				callback: function (r) {
+					console.log(r.message);
+	
+					let teams_url = r.message.teams_url;
+					let sharepoint_url = r.message.sharepoint_url
+					let m365_url = r.message.m365_url
+					frm.fields_dict.m365_team_redirect.$wrapper.html(`
+						<button class = "btn btn-default" onclick="window.open('${teams_url}', '_blank')">Redirect to Teams ${teams_logo}</button>
+					`);
+					frm.fields_dict.m365_sharepoint_redirect.$wrapper.html(`
+						<button class = "btn btn-default" onclick="window.open('${sharepoint_url}', '_blank')">Redirect to SharePoint ${sharepoint_logo}</button>
+					`);
+					frm.fields_dict.m365_group_redirect.$wrapper.html(`
+						<button class = "btn btn-default" onclick="window.open('${m365_url}', '_blank')">Redirect to Outlook ${outlook_logo}</button>
+					`);
+				}
+			});
+		})
+
+		if(frm.doc.m365_team_site){
+			frm.fields_dict.m365_team_redirect.$wrapper.html(`
+				<button class = "btn btn-default" onclick="window.open('${frm.doc.m365_team_site}', '_blank')">Redirect to Teams ${teams_logo}</button>
+			`);
+		}
+		if(frm.doc.m365_sharepoint_site){
+			frm.fields_dict.m365_sharepoint_redirect.$wrapper.html(`
+				<button class = "btn btn-default" onclick="window.open('${frm.doc.m365_sharepoint_site}', '_blank')">Redirect to SharePoint ${sharepoint_logo}</button>
+			`);
+		}
+		if(frm.doc.m365_group_site){
+			frm.fields_dict.m365_group_redirect.$wrapper.html(`
+				<button class = "btn btn-default" onclick="window.open('${frm.doc.m365_group_site}', '_blank')">Redirect to Outlook ${outlook_logo}</button>
+			`);
+		}
 	}
 });

@@ -12,16 +12,25 @@
   "m365_group_name",
   "m365_group_id",
   "m365_group_description",
-  "column_break_5",
   "mailnickname",
+  "column_break_5",
+  "m365_group_site",
+  "m365_group_redirect",
   "m365_group_member_info_section",
   "m365_groups_member",
   "m365_sharepoint_information_section",
-  "m365_sharepoint_site",
-  "column_break_vfjdb",
   "m365_sharepoint_id",
-  "column_break_j88l",
-  "m365_team_id"
+  "column_break_vfjdb",
+  "m365_sharepoint_site",
+  "m365_sharepoint_redirect",
+  "m365_team_information_section",
+  "m365_team_id",
+  "column_break_dc4k",
+  "m365_team_site",
+  "m365_team_redirect",
+  "members_tab",
+  "members_section",
+  "members_table_html"
  ],
  "fields": [
   {
@@ -103,19 +112,66 @@
    "label": "M365 Group Member Info"
   },
   {
-   "fieldname": "column_break_j88l",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "m365_team_id",
    "fieldtype": "Data",
    "label": "M365 Team ID",
    "read_only": 1
+  },
+  {
+   "fieldname": "m365_team_redirect",
+   "fieldtype": "HTML",
+   "label": "M365 Team Redirect"
+  },
+  {
+   "fieldname": "m365_group_redirect",
+   "fieldtype": "HTML",
+   "label": "M365 Group Redirect"
+  },
+  {
+   "fieldname": "m365_sharepoint_redirect",
+   "fieldtype": "HTML",
+   "label": "M365 SharePoint Redirect"
+  },
+  {
+   "fieldname": "m365_team_site",
+   "fieldtype": "Long Text",
+   "label": "M365 Team Site",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dc4k",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "m365_team_information_section",
+   "fieldtype": "Section Break",
+   "label": "M365 Team Information"
+  },
+  {
+   "fieldname": "m365_group_site",
+   "fieldtype": "Data",
+   "label": "M365 Group Site",
+   "read_only": 1
+  },
+  {
+   "fieldname": "members_tab",
+   "fieldtype": "Tab Break",
+   "label": "Members"
+  },
+  {
+   "fieldname": "members_section",
+   "fieldtype": "Section Break",
+   "label": "Members"
+  },
+  {
+   "fieldname": "members_table_html",
+   "fieldtype": "HTML",
+   "label": "Members Table"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-26 13:36:47.968070",
+ "modified": "2025-01-06 12:01:28.733992",
  "modified_by": "Administrator",
  "module": "Frappe M365",
  "name": "M365 Groups",

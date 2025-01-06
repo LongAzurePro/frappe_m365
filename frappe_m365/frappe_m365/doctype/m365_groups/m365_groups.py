@@ -331,6 +331,192 @@ class M365Groups(Document):
         else:
             return []
             # frappe.throw(f'Error: {response.text}')
+    
+    @frappe.whitelist()
+    def add_user_to_m365(self,user_id):
+        email = frappe.get_value("User", {"email": user_id}, "email")
+
+        self._settings = frappe.get_single(M365)
+
+        # URL endpoint để thêm thành viên vào nhóm
+        url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/members/$ref"
+
+        # Lấy user ID từ email
+        user_url = f"https://graph.microsoft.com/v1.0/users/{email}"
+
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+
+        user_response = requests.get(
+            user_url,
+            headers=headers
+        )
+        
+        if user_response.status_code != 200:
+            # frappe.response["http_status_code"] = 400
+            
+            return str({"error": f"Cannot find user with email {email}", "details": user_response.json()})
+            # return f"Cannot find user with email {email}"
+
+        office_user_id = user_response.json().get("id")
+        if not office_user_id:
+            # frappe.response["http_status_code"] = 400
+            return str({"error": "User ID not found in the response"})
+        
+            # return f"Cannot find user with email {email}"
+
+        # Dữ liệu để thêm người dùng vào nhóm
+        payload = {
+            "@odata.id": f"https://graph.microsoft.com/v1.0/directoryObjects/{office_user_id}"
+        }
+
+        # Gửi yêu cầu POST để thêm thành viên vào nhóm
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload
+        )
+
+        # Xử lý phản hồi
+        if response.status_code == 204:
+
+            # frappe.response["http_status_code"] = 200
+
+            # After that email added to M365, create a new M365 Group Member for M365 Group Doc
+
+            self.append("m365_groups_member",{
+                "doctype":"M365 Groups Member",
+                "user":email,
+            })
+
+            self.save()
+            frappe.db.commit()
+
+            return {"success": f"User {email} added to group {self.name}"}
+            # return f"User {email} added to group {self.name}"
+        else:
+            # frappe.response["http_status_code"] = 400
+
+            return {"error": "Failed to add user to group", "details": response.json()}
+
+            # return f"Failed to add user to group {response.text}"
+
+    @frappe.whitelist()
+    def add_member_to_m365_via_power_automate(self,user_id):
+
+        #Is this an innovation??? I'd think so
+    
+        email = frappe.get_value("User", {"email": user_id}, "email")
+
+        settings = frappe.get_single(M365)
+
+        connected_app = frappe.get_doc("Connected App", settings.connected_power_automate)
+        oauth_token = connected_app.get_active_token(settings.connected_user)
+
+        headers = {'Authorization': f'Bearer {oauth_token.get_password("access_token")}'}
+        # headers.update(ContentType)
+
+        # URL của trigger từ Power Automate
+        url = "https://prod-36.southeastasia.logic.azure.com:443/workflows/a33f2efc32854362994f3fb1e65d6093/triggers/manual/paths/invoke?api-version=2016-06-01"
+
+        # Thông tin người dùng cần thêm
+        data = {
+            "email": email,
+            "group_id": self.m365_group_id
+        }
+
+        # Gọi HTTP request đến Power Automate
+        response = requests.post(url, json=data, headers=headers)
+
+        # Kiểm tra kết quả
+        if response.status_code == 200:
+            return "User added to the group successfully!"
+        else:
+            return f"Failed to add user {response.text}"
+
+        
+    @frappe.whitelist()
+    def remove_member_from_m365(self,email):
+        self._settings = frappe.get_single(M365)
+
+        # 1. Lấy member-id từ email
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+
+        # 1. Tìm người dùng bằng email
+        user_url = f'https://graph.microsoft.com/v1.0/users/{email}'
+        response = requests.get(user_url, headers=headers)
+
+        if response.status_code == 200:
+            user_data = response.json()
+            user_id = user_data['id']
+            
+        else:
+            return f'Error when retrieving user infomation ({response.status_code}): {response.json()}'
+
+        # 2. Loại bỏ người dùng khỏi nhóm
+        remove_url = f'https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/members/{user_id}/$ref'
+        remove_response = requests.delete(remove_url, headers=headers)
+
+        if remove_response.status_code == 204:
+
+            for m in self.m365_groups_member:
+                if m.user == email:
+                    self.m365_groups_member.remove(m)
+                    self.save()
+                    frappe.db.commit()
+                    break
+
+            return f'User {email} is successfully removed from Group {self.m365_group_id}'
+        else:
+            return f'Error when removing user from this group: {remove_response.status_code} {remove_response.json()}'
+
+    @frappe.whitelist()
+    def sync_office_365_links(self):
+        self._settings = frappe.get_single(M365)
+
+        # 1. Lấy member-id từ email
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+
+        result = {}
+
+        if self.m365_team_id:
+            team_api = f"https://graph.microsoft.com/v1.0/teams/{self.m365_team_id}"
+            response = requests.get(team_api,headers=headers)
+            response = response.json()
+
+            self.m365_team_site = response.get("webUrl")
+            self.save()
+
+            result["teams_url"] = response.get("webUrl")
+        if self.m365_sharepoint_id:
+            sharepoint_api = f'{self._settings.m365_graph_url}/groups/{self.m365_group_id}/sites/root'
+            response = requests.get(sharepoint_api,headers=headers)
+            response = response.json()
+
+            self.m365_sharepoint_name = response.get("webUrl")
+            self.save()
+
+            result["sharepoint_url"] = response.get("webUrl")
+        if self.m365_group_id:
+            m365_api = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}"
+            response = requests.get(m365_api,headers=headers)
+
+            frappe.msgprint(response.text)
+            response = response.json()
+            mailnickname,company_site = response["mail"].split("@")
+            m365_url = f"https://outlook.office.com/groups/{company_site}/{mailnickname}/mail"
+
+            self.m365_group_site = m365_url
+            self.save()
+
+            result["m365_url"] = m365_url
+
+        return result
+
+
+
 
 
 @frappe.whitelist()
@@ -379,8 +565,7 @@ def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=
                 frappe.db.commit()
         # frappe.msgprint(str(group_doc.__dict__))
         for m in group_doc.m365_groups_member:
-            frappe.msgprint(str(m))
-
+            frappe.msgprint(str(m.__dict__))
     
 
     frappe.msgprint(f"M365 Group created for {doc['name']}")
