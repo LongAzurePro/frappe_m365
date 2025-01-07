@@ -30,7 +30,9 @@
   "m365_team_redirect",
   "members_tab",
   "members_section",
-  "members_table_html"
+  "members_table_html",
+  "admins_tab",
+  "admins_table_html"
  ],
  "fields": [
   {
@@ -167,11 +169,21 @@
    "fieldname": "members_table_html",
    "fieldtype": "HTML",
    "label": "Members Table"
+  },
+  {
+   "fieldname": "admins_tab",
+   "fieldtype": "Section Break",
+   "label": "Admins"
+  },
+  {
+   "fieldname": "admins_table_html",
+   "fieldtype": "HTML",
+   "label": "Admins Table"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-06 12:01:28.733992",
+ "modified": "2025-01-06 16:10:32.989295",
  "modified_by": "Administrator",
  "module": "Frappe M365",
  "name": "M365 Groups",

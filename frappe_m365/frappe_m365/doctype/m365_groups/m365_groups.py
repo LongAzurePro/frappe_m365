@@ -334,7 +334,8 @@ class M365Groups(Document):
     
     @frappe.whitelist()
     def add_user_to_m365(self,user_id):
-        email = frappe.get_value("User", {"email": user_id}, "email")
+        # email = frappe.get_value("User", {"email": user_id}, "email")
+        email = str(user_id)
 
         self._settings = frappe.get_single(M365)
 
@@ -383,14 +384,14 @@ class M365Groups(Document):
             # frappe.response["http_status_code"] = 200
 
             # After that email added to M365, create a new M365 Group Member for M365 Group Doc
+            if frappe.db.exists("User", {"email": email}):
+                self.append("m365_groups_member",{
+                    "doctype":"M365 Groups Member",
+                    "user":email,
+                })
 
-            self.append("m365_groups_member",{
-                "doctype":"M365 Groups Member",
-                "user":email,
-            })
-
-            self.save()
-            frappe.db.commit()
+                self.save()
+                frappe.db.commit()
 
             return {"success": f"User {email} added to group {self.name}"}
             # return f"User {email} added to group {self.name}"
@@ -532,6 +533,34 @@ class M365Groups(Document):
             return f"Email {email} became Administrator of Group {self.m365_group_id}!"
         else:
             return f"Error when asigning Administrator: {response.text}"
+    
+    @frappe.whitelist()
+    def remove_admin_from_m365(self,email):
+        user_lookup_url = f"https://graph.microsoft.com/v1.0/users/{email}"
+        # Headers cho request
+
+        self._settings = frappe.get_single(M365)
+
+        headers = get_request_header(self._settings)
+
+        # 1. Tìm ID của user từ email
+        response = requests.get(user_lookup_url, headers=headers)
+        if response.status_code == 200:
+            user_data = response.json()
+            user_id = user_data.get("id")
+            # frappe.msgprint(f"User ID: {user_id}")
+        else:
+            return f"Email {email} not found in this tenant!"
+
+        # 2. Xóa tài khoản khỏi danh sách admin (quản trị viên)
+        remove_owner_url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/owners/{user_id}/$ref"
+
+        response = requests.delete(remove_owner_url, headers=headers)
+
+        if response.status_code in [200, 204]:
+            return f"Email {email} removed from Administrators list of Group {self.m365_group_id}!"
+        else:
+            return f"Error when asigning Administrator: {response.text}"
         
     
 
@@ -591,7 +620,7 @@ def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=
     doc = eval(doc)
     m365_members = []
     
-    
+    # Tạo doc M365
     group_doc = frappe.get_doc("M365 Groups",f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") if frappe.db.exists("M365 Groups", f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") else frappe.get_doc({
             "doctype":"M365 Groups",
             "m365_group_name":f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "",
@@ -607,10 +636,12 @@ def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=
         doc_obj.save()
         frappe.db.commit()
     
+    #Chạy luồng tạo nhóm M365 trên Graph Microsoft
     group_doc.run_m365_groups_flow()
     group_doc.save()
     frappe.db.commit()
 
+    #Đồng bộ thành viên
     if (members_doctype and members_search_field):
         members = frappe.get_all(
             members_doctype,
@@ -623,7 +654,12 @@ def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=
         for m in members:
             if not frappe.db.exists("M365 Groups Member",m["user_id"]):
                 new_mem = frappe.get_doc({"doctype":"M365 Groups Member","user":m["user_id"]})
-                group_doc.m365_groups_member.append(new_mem)
+                # group_doc.m365_groups_member.append(""new_mem)
+                group_doc.append("m365_groups_member",{
+                    "doctype":"M365 Groups Member",
+                    "user":m["user_id"],
+                })
+
                 # new_mem.save()
                 group_doc.save()
                 frappe.db.commit()

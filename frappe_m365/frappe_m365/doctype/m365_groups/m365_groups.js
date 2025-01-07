@@ -103,14 +103,14 @@ frappe.ui.form.on('M365 Groups', {
 		// 	}
 		// });
 
-		remove_member_from_m365 = (email) => {
+		add_user_to_m365 = (user_id) => {
 			frappe.call({
-				method: "remove_member_from_m365",
+				method: "add_user_to_m365",
 				freeze: 1,
 				freeze_message: "<h4>Please wait while we do the action.../h4>",
 				doc: frm.doc,
 				args:{
-					email:email
+					user_id:user_id
 				},
 				callback: function (response) {
 					console.log(response.message);
@@ -120,21 +120,80 @@ frappe.ui.form.on('M365 Groups', {
 			});
 		}
 
-		promote_member_to_m365_admin = (email) => {
-			frappe.call({
-				method: "promote_member_to_m365_admin",
-				freeze: 1,
-				freeze_message: "<h4>Please wait while we do the action.../h4>",
-				doc: frm.doc,
-				args:{
-					email:email
-				},
-				callback: function (response) {
-					console.log(response.message);
-					frappe.msgprint(` ${JSON.stringify(response.message)} `);
-					frm.reload_doc();
+		remove_member_from_m365 = (email) => {
+			frappe.confirm("Are you sure to do this action? (This action cannot be turned back)",
+				function (){
+				frappe.call({
+					method: "remove_member_from_m365",
+					freeze: 1,
+					freeze_message: "<h4>Please wait while we do the action.../h4>",
+					doc: frm.doc,
+					args:{
+						email:email
+					},
+					callback: function (response) {
+						console.log(response.message);
+						frappe.msgprint(` ${JSON.stringify(response.message)} `);
+						frm.reload_doc();
+					}
+					});
 				}
-			});
+			);
+		}
+
+		promote_member_to_m365_admin = (email) => {
+			frappe.confirm("Are you sure to do this action? (This action cannot be turned back)",
+				function (){
+					frappe.call({
+						method: "promote_member_to_m365_admin",
+						freeze: 1,
+						freeze_message: "<h4>Please wait while we do the action.../h4>",
+						doc: frm.doc,
+						args:{
+							email:email
+						},
+						callback: function (response) {
+							console.log(response.message);
+							frappe.msgprint(` ${JSON.stringify(response.message)} `);
+							frm.reload_doc();
+						}
+					});
+				}
+			)
+			
+		}
+
+		remove_admin_from_m365 = (email) => {
+			frappe.confirm("Are you sure to do this action? (This action cannot be turned back)",
+				function (){
+					frappe.call({
+						method: "remove_admin_from_m365",
+						freeze: 1,
+						freeze_message: "<h4>Please wait while we do the action.../h4>",
+						doc: frm.doc,
+						args:{
+							email:email
+						},
+						callback: function (response) {
+							console.log(response.message);
+							frappe.msgprint(` ${JSON.stringify(response.message)} `);
+							frm.reload_doc();
+						}
+					});
+				}
+			)
+			
+		}
+
+		add_member_form = () => {
+			frappe.prompt([
+                {'fieldname': 'email', 'fieldtype': 'Data', 'label': 'Nhập Email', 'reqd': 1}
+            ],
+            function(values){
+                add_user_to_m365(values.email)
+            },
+            'Email',
+            'Add member to M365');
 		}
 
 		frappe.call({
@@ -169,9 +228,10 @@ frappe.ui.form.on('M365 Groups', {
 							<td>${member.displayName}</td>
 							<td>${member.jobTitle ?? ""}</td>
 							<td>${member.mail}</td>
-							<td><button onclick = "remove_member_from_m365('${member.mail}')" class = "btn btn-default">Remove from M365 Group</button>
+							<td>
+							<button onclick = "promote_member_to_m365_admin('${member.mail}')" class = "btn btn-primary">Promote to M365 Group Administrator</button>
 							<br><br>
-							<button onclick = "promote_member_to_m365_admin('${member.mail}')" class = "btn btn-primary">Promote to M365 Group Administrator</button></td>
+							<button onclick = "remove_member_from_m365('${member.mail}')" class = "btn btn-danger">Remove from M365 Group</button></td>
 						</tr>
 					`;
 				});
@@ -180,9 +240,62 @@ frappe.ui.form.on('M365 Groups', {
 						</tbody>
 					</table>
 				`;
+				members_table_html += `
+					<button class="btn btn-primary" onclick = "add_member_form()">Add Member</button>
+				`;
 
 				// Đưa bảng HTML vào trường HTML Field
 				frm.fields_dict['members_table_html'].$wrapper.html(members_table_html);
+			}
+		});
+
+		frappe.call({
+			method: "get_m365_admins_on_server",
+			freeze: 0,
+			freeze_message: "<h4>Please wait while we are retrieving members from M365</h4>",
+			doc: frm.doc,
+			callback: function (response) {
+				console.log(JSON.stringify(response.message));
+
+				const data = response.message;
+
+				let admins_table_html = `
+					<table class="table table-bordered">
+						<thead>
+							<tr>
+								<th>Office 365 ID</th>
+								<th>Name</th>
+								<th>Designation</th>
+								<th>Email</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+				`;
+
+				// Đổ dữ liệu vào bảng
+				data.forEach(member => {
+					admins_table_html += `
+						<tr>
+							<td>${member.id}</td>
+							<td>${member.displayName}</td>
+							<td>${member.jobTitle ?? ""}</td>
+							<td>${member.mail}</td>
+							<td>
+							<button onclick = "remove_admin_from_m365('${member.mail}')" class = "btn btn-primary">Remove from M365 Group Administrator</button>
+							<br><br>
+							<button onclick = "remove_member_from_m365('${member.mail}')" class = "btn btn-danger">Remove from M365 Group</button></td>
+						</tr>
+					`;
+				});
+
+				admins_table_html += `
+						</tbody>
+					</table>
+				`;
+
+				// Đưa bảng HTML vào trường HTML Field
+				frm.fields_dict['admins_table_html'].$wrapper.html(admins_table_html);
 			}
 		});
 
@@ -217,17 +330,17 @@ frappe.ui.form.on('M365 Groups', {
 			});
 		})
 
-		if(frm.doc.m365_team_site){
+		if(frm.doc.m365_team_site !== null && frm.doc.m365_team_site !== undefined){
 			frm.fields_dict.m365_team_redirect.$wrapper.html(`
 				<button class = "btn btn-default" onclick="window.open('${frm.doc.m365_team_site}', '_blank')">Redirect to Teams ${teams_logo}</button>
 			`);
 		}
-		if(frm.doc.m365_sharepoint_site){
+		if(frm.doc.m365_sharepoint_site !== null && frm.doc.m365_sharepoint_site !== undefined){
 			frm.fields_dict.m365_sharepoint_redirect.$wrapper.html(`
 				<button class = "btn btn-default" onclick="window.open('${frm.doc.m365_sharepoint_site}', '_blank')">Redirect to SharePoint ${sharepoint_logo}</button>
 			`);
 		}
-		if(frm.doc.m365_group_site){
+		if(frm.doc.m365_group_site !== null && frm.doc.m365_group_site !== undefined){
 			frm.fields_dict.m365_group_redirect.$wrapper.html(`
 				<button class = "btn btn-default" onclick="window.open('${frm.doc.m365_group_site}', '_blank')">Redirect to Outlook ${outlook_logo}</button>
 			`);
