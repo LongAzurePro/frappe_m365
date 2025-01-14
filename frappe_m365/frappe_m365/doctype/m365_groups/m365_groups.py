@@ -74,33 +74,18 @@ class M365Groups(Document):
 
     def create_m365_group(self):
         user_id = self.get_user_info()
-        template = self.template
-        if template == "educationClass":
-            self._settings.connected_app = "73m034hajh"
-            url = f'{self._settings.m365_graph_url}/education/classes'
-
-            body = {
+        url = f'{self._settings.m365_graph_url}/groups'
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+        body = {
             "description": f"{self.m365_group_description}",
             "displayName": f"{self.m365_group_name}",
             "groupTypes": ["Unified"],
             "mailEnabled": True,
             "mailNickname": f"{self.mailnickname}",
             "securityEnabled": False,
-                }
-        else: 
-            url = f'{self._settings.m365_graph_url}/groups'
-            body = {
-                "description": f"{self.m365_group_description}",
-                "displayName": f"{self.m365_group_name}",
-                "groupTypes": ["Unified"],
-                "mailEnabled": True,
-                "mailNickname": f"{self.mailnickname}",
-                "securityEnabled": False,
-                "owners@odata.bind": [f"{self._settings.m365_graph_url}/users/{user_id}"],
-            }
-
-        headers = get_request_header(self._settings)
-        headers.update(ContentType)
+            "owners@odata.bind": [f"https://graph.microsoft.com/v1.0/users/{user_id}"]
+        }
 
         response = make_request('POST', url, headers, body)
         if (response.status_code == 201):
@@ -111,15 +96,6 @@ class M365Groups(Document):
         else:
             frappe.log_error("M365 Group Creation Error", response.text)
             frappe.msgprint(response.text)
-        self._settings.connected_app = "vs1tbfri1a"
-        if template == "educationClass":
-
-            url = f'{self._settings.m365_graph_url}/groups/{self.m365_group_id}'
-            headers = get_request_header(self._settings)
-            headers.update(ContentType)
-            body = {"owners@odata.bind": [f"{self._settings.m365_graph_url}/directoryObjects/{user_id}"]}
-
-            response = make_request('PATCH', url, headers, body)
 
     def initialize_M365_groups_services(self):
         if not self.m365_sharepoint_id or not self.m365_sharepoint_site:
@@ -284,7 +260,7 @@ class M365Groups(Document):
     def create_team_for_m365_groups(self):
         self._settings = frappe.get_single(M365)
 
-        group_id = self.m365_group_id
+        group_id = self.m365_group_id  # Đây là ID của nhóm M365 đã tạo trước đó
 
         url = f'{self._settings.m365_graph_url}/groups/{group_id}/team'
 
@@ -301,10 +277,8 @@ class M365Groups(Document):
             frappe.db.commit()
 
         else:
-            url = f'{self._settings.m365_graph_url}/teams'
+
             body = {
-                "template@odata.bind": f"{self._settings.m365_graph_url}/teamsTemplates('{self.template}')",
-                "group@odata.bind": f"{self._settings.m365_graph_url}/groups('{group_id}')",
                 "memberSettings": {
                     "allowCreateUpdateChannels": True,
                     "allowDeleteChannels": True
@@ -319,7 +293,7 @@ class M365Groups(Document):
                 }
             }
 
-            response = make_request('POST', url, headers, body)
+            response = requests.put(url, headers=headers, json=body)
 
             if response.status_code == 201:
                 frappe.msgprint(response.text)
@@ -333,4 +307,7 @@ class M365Groups(Document):
             else:
                 frappe.log_error("Teams Group Creation Error", response.text)
                 frappe.msgprint(response.text)
-
+@frappe.whitelist()
+def create_m365_group_for_doc(doc):
+    frappe.msgprint(doc)
+    pass

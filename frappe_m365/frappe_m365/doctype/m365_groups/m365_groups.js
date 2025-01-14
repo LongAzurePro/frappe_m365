@@ -8,52 +8,12 @@ frappe.ui.form.on('M365 Groups', {
 			if(!frm.doc.m365_group_id){
 				frm.trigger('add_connect_button');
 			}else{
-				frm.trigger('update_group_members');				
-				frm.trigger('create_team');
-				frm.trigger('handle_add_employee');
+				frm.trigger('update_group_members');
+				frm.trigger('create_team')
 			}
 		}
 	},
-	handle_add_employee: function(frm){
-		if(frm.doc.department_id && frm.doc.company){
-			frappe.call({
-				method: "frappe.client.get_list",
-				args :{
-				"doctype": "Employee",
-				"fields": ["name","user_id","department","company"],
-				"filters": [
-					["department", "=", frm.doc.department_id],
-					["company", "=", frm.doc.company]
-				]
-				},
-				callback: function(r){
-					let userIds = r.message.map(emp => emp.user_id).filter(user_id => user_id);
-					frappe.call({
-						method: "frappe.client.get_list",
-						args:{
-							doctype: "User",
-							filters: {
-								"name": ["in", userIds]
-							},
-							fields: ["name"]
-						},
-						callback: function(r){
-							if(r.message){
-								if (!frm.doc["m365_groups_member"] || !frm.doc["m365_groups_member"].length > 0){
-								frm.clear_table("m365_groups_member");
-								r.message.forEach(user=>{
-									let row =frm.add_child("m365_groups_member");
-									row.user = user.name;
-								});
-								frm.refresh_field("m365_groups_member");
-							}
-						}
-						}
-					})
-				}
-			})
-		}
-	},
+
 	set_default_values: function (frm) {
 		if (!frm.doc.m365_group_description) {
 			frm.set_value('m365_group_description', 'This group has been created from Frappe-M365');
