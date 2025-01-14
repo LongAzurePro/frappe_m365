@@ -68,6 +68,23 @@ frappe.ui.form.on('M365 Groups', {
 				});
 			}
 		});
+
+		frm.add_custom_button(__("Get Teams Templates"), function () {
+			if (frm.is_dirty()) {
+				frappe.msgprint("Please save the form first.")
+			} else {
+				frappe.call({
+					method: "get_teams_templates",
+					freeze: 1,
+					freeze_message: "<h4>Please wait while we do the action</h4>",
+					doc: frm.doc,
+					callback: function (r) {
+						frappe.msgprint(r.message);
+					}
+				});
+			}
+		});
+
 	},
 	create_team: function (frm) {
 		frm.add_custom_button(__("Create Team for M365 Group"), function () {
@@ -195,6 +212,7 @@ frappe.ui.form.on('M365 Groups', {
             'Email',
             'Add member to M365');
 		}
+		
 
 		frappe.call({
 			method: "get_m365_members_on_server",

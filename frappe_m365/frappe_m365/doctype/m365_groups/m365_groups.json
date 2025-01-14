@@ -116,8 +116,7 @@
   {
    "fieldname": "m365_team_id",
    "fieldtype": "Data",
-   "label": "M365 Team ID",
-   "read_only": 1
+   "label": "M365 Team ID"
   },
   {
    "fieldname": "m365_team_redirect",
@@ -183,7 +182,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-01-06 16:10:32.989295",
+ "modified": "2025-01-07 12:46:48.642318",
  "modified_by": "Administrator",
  "module": "Frappe M365",
  "name": "M365 Groups",

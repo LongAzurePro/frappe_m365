@@ -282,6 +282,7 @@ class M365Groups(Document):
         else:
 
             body = {
+                "template@odata.bind": "https://graph.microsoft.com/v1.0/teamsTemplates('standard')",
                 "memberSettings": {
                     "allowCreateUpdateChannels": True,
                     "allowDeleteChannels": True
@@ -293,7 +294,7 @@ class M365Groups(Document):
                 "funSettings": {
                     "allowGiphy": True,
                     "allowStickersAndEmojis": True
-                }
+                },
             }
 
             response = requests.put(url, headers=headers, json=body)
@@ -608,6 +609,20 @@ class M365Groups(Document):
 
         return result
 
+    @frappe.whitelist()
+    def get_teams_templates(self):
+        self._settings = frappe.get_single(M365)
+
+        # 1. Lấy member-id từ email
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+
+        url = "https://graph.microsoft.com/beta/teamwork/teamTemplates"
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.text
+        else:
+            return f"Error: {response.status_code}, {response.text}"
 
 
 
