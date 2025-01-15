@@ -12,8 +12,11 @@
   "m365_group_name",
   "m365_group_id",
   "m365_group_description",
+  "template",
   "column_break_5",
   "mailnickname",
+  "department_id",
+  "company",
   "m365_group_member_info_section",
   "m365_groups_member",
   "m365_sharepoint_information_section",
@@ -113,11 +116,29 @@
    "fieldtype": "Data",
    "label": "M365 Team ID",
    "read_only": 1
+  },
+  {
+   "fieldname": "department_id",
+   "fieldtype": "Data",
+   "label": "Department ID"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Data",
+   "label": "Company"
+  },
+  {
+   "default": "standard",
+   "fieldname": "template",
+   "fieldtype": "Select",
+   "label": "Template",
+   "options": "standard\neducationClass\neducationStandard\neducationStaff\neducationProfessionalLearningCommunity",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-13 17:02:22.453085",
+ "modified": "2025-01-12 09:39:37.293786",
  "modified_by": "Administrator",
  "module": "Frappe M365",
  "name": "M365 Groups",
