@@ -17,7 +17,7 @@ def get_oauth_token(settings):
     return oauth_token.get_password("access_token")
 
 def get_oauth_application_token(settings):
-    connected_app = frappe.get_doc("Connected App", settings.connected_app)
+    connected_app = frappe.get_doc("Connected App", settings.connected_app_for_application)
     oauth_token = connected_app.get_backend_app_token()
 
     if oauth_token == None:
@@ -29,13 +29,13 @@ def get_oauth_application_token(settings):
 def get_request_header(settings):
     access_token = get_oauth_token(settings)
     headers = {'Authorization': f'Bearer {access_token}'}
-    frappe.msgprint(access_token)
+    # frappe.msgprint(access_token)
     return headers
 
 def get_application_request_header(settings):
     access_token = get_oauth_application_token(settings)
     headers = {'Authorization': f'Bearer {access_token}'}
-    frappe.msgprint(access_token)
+    # frappe.msgprint(access_token)
     return headers
 
 #general api request
