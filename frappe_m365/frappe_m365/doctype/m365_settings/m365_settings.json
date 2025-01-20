@@ -9,9 +9,10 @@
  "field_order": [
   "oauth_authorization_section",
   "connected_app",
-  "connected_power_automate",
+  "connected_app_for_application",
   "column_break_8",
   "connected_user",
+  "connected_power_automate",
   "endpoints_section",
   "m365_graph_url",
   "sharepoint_settings_section",
@@ -108,12 +109,18 @@
    "fieldtype": "Link",
    "label": "Connected Power Automate",
    "options": "Connected App"
+  },
+  {
+   "fieldname": "connected_app_for_application",
+   "fieldtype": "Link",
+   "label": "Connected App for Application",
+   "options": "Connected App"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-03 09:24:09.440768",
+ "modified": "2025-01-18 20:28:13.423020",
  "modified_by": "Administrator",
  "module": "Frappe M365",
  "name": "M365 Settings",
