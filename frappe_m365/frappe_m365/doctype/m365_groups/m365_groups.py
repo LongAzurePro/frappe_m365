@@ -79,7 +79,7 @@ class M365Groups(Document):
         frappe.msgprint(self.mailnickname)
         self.save()
         if template == "educationClass":
-            self._settings.connected_app = "73m034hajh"
+            # self._settings.connected_app = "73m034hajh"
             url = f'{self._settings.m365_graph_url}/education/classes'
             body = {
             "description": f"{self.m365_group_description}",
