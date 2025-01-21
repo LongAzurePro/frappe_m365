@@ -109,21 +109,21 @@ frappe.ui.form.on('M365 Groups', {
 			}
 		});
 
-		frm.add_custom_button(__("Get Teams Templates"), function () {
-			if (frm.is_dirty()) {
-				frappe.msgprint("Please save the form first.")
-			} else {
-				frappe.call({
-					method: "get_teams_templates",
-					freeze: 1,
-					freeze_message: "<h4>Please wait while we do the action</h4>",
-					doc: frm.doc,
-					callback: function (r) {
-						frappe.msgprint(r.message);
-					}
-				});
-			}
-		});
+		// frm.add_custom_button(__("Get Teams Templates"), function () {
+		// 	if (frm.is_dirty()) {
+		// 		frappe.msgprint("Please save the form first.")
+		// 	} else {
+		// 		frappe.call({
+		// 			method: "get_teams_templates",
+		// 			freeze: 1,
+		// 			freeze_message: "<h4>Please wait while we do the action</h4>",
+		// 			doc: frm.doc,
+		// 			callback: function (r) {
+		// 				frappe.msgprint(r.message);
+		// 			}
+		// 		});
+		// 	}
+		// });
 
 	},
 	create_team: function (frm) {
@@ -137,6 +137,7 @@ frappe.ui.form.on('M365 Groups', {
 					freeze_message: "<h4>Please wait while we are creating a Team for M365 Group...</h4>",
 					doc: frm.doc,
 					callback: function (r) {
+						frappe.msgprint(r.message);
 						frm.reload_doc();
 					}
 				});
@@ -160,14 +161,14 @@ frappe.ui.form.on('M365 Groups', {
 		// 	}
 		// });
 
-		add_user_to_m365 = (user_id) => {
+		add_user_to_m365 = (email) => {
 			frappe.call({
 				method: "add_user_to_m365",
 				freeze: 1,
 				freeze_message: "<h4>Please wait while we do the action.../h4>",
 				doc: frm.doc,
 				args:{
-					user_id:user_id
+					email:email
 				},
 				callback: function (response) {
 					console.log(response.message);
@@ -375,13 +376,13 @@ frappe.ui.form.on('M365 Groups', {
 					let teams_url = r.message.teams_url;
 					let sharepoint_url = r.message.sharepoint_url
 					let m365_url = r.message.m365_url
-					frm.fields_dict.m365_team_redirect.$wrapper.html(`
+					if(teams_url !== null && teams_url !== undefined) frm.fields_dict.m365_team_redirect.$wrapper.html(`
 						<button class = "btn btn-default" onclick="window.open('${teams_url}', '_blank')">Redirect to Teams ${teams_logo}</button>
 					`);
-					frm.fields_dict.m365_sharepoint_redirect.$wrapper.html(`
+					if(sharepoint_url !== null && sharepoint_url !== undefined) frm.fields_dict.m365_sharepoint_redirect.$wrapper.html(`
 						<button class = "btn btn-default" onclick="window.open('${sharepoint_url}', '_blank')">Redirect to SharePoint ${sharepoint_logo}</button>
 					`);
-					frm.fields_dict.m365_group_redirect.$wrapper.html(`
+					if(m365_url !== null && m365_url !== undefined) frm.fields_dict.m365_group_redirect.$wrapper.html(`
 						<button class = "btn btn-default" onclick="window.open('${m365_url}', '_blank')">Redirect to Outlook ${outlook_logo}</button>
 					`);
 				}

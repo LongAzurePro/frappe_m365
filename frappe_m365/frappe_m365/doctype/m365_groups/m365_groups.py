@@ -74,6 +74,7 @@ class M365Groups(Document):
 
     def create_m365_group(self):
         user_id = self.get_user_info()
+        frappe.msgprint(f'{user_id}')
         template = self.template
         self.mailnickname = convert_to_identifier(self.name)
         frappe.msgprint(self.mailnickname)
@@ -113,13 +114,22 @@ class M365Groups(Document):
         else:
             frappe.log_error("M365 Group Creation Error", response.text)
             frappe.msgprint(response.text)
-        self._settings.connected_app = "vs1tbfri1a"
+        # self._settings.connected_app = "vs1tbfri1a"
+
+        frappe.msgprint(f"Promoting {user_id} to group Administrator.")
+        time.sleep(5)
+        self.add_user_to_m365(user_id=user_id)
+        self.promote_member_to_m365_admin(user_id=user_id)
+
         if template == "educationClass":
             url = f'{self._settings.m365_graph_url}/groups/{self.m365_group_id}'
             headers = get_application_request_header(self._settings)
             headers.update(ContentType)
             body = {"owners@odata.bind": [f"{self._settings.m365_graph_url}/directoryObjects/{user_id}"]}
             response = make_request('PATCH', url, headers, body)
+            self.create_team_for_m365_groups()
+        
+        
 
     def initialize_M365_groups_services(self):
         if not self.m365_sharepoint_id or not self.m365_sharepoint_site:
@@ -318,8 +328,13 @@ class M365Groups(Document):
                     "allowStickersAndEmojis": True
                 },
             }
+            
+            if self.template == "educationClass":
+                response = requests.post(url,headers=headers,json=body)
+            else:
+                response = requests.post(url,headers=headers,json=body)
 
-            response = make_request('POST', url, headers, body)
+            # response = make_request("PUT" if  else "POST", url, headers, body)
 
             if response.status_code == 201:
                 frappe.msgprint(response.text)
@@ -329,7 +344,8 @@ class M365Groups(Document):
                 self.save()
                 frappe.db.commit()
                 
-                frappe.msgprint('Microsoft Teams group has been created successfully.')
+                frappe.msgprint("Microsoft Teams group has been created successfully.")
+                return "Microsoft Teams group has been created successfully."
             else:
                 frappe.log_error("Teams Group Creation Error", response.text)
                 frappe.msgprint(response.text)
@@ -356,33 +372,40 @@ class M365Groups(Document):
             # frappe.throw(f'Error: {response.text}')
     
     @frappe.whitelist()
-    def add_user_to_m365(self,user_id):
+    def add_user_to_m365(self,email=None,user_id=None):
         # email = frappe.get_value("User", {"email": user_id}, "email")
-        email = str(user_id)
-
-        self._settings = frappe.get_single(M365)
-
         # URL endpoint để thêm thành viên vào nhóm
         url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/members/$ref"
-
-        # Lấy user ID từ email
-        user_url = f"https://graph.microsoft.com/v1.0/users/{email}"
 
         headers = get_request_header(self._settings)
         headers.update(ContentType)
 
-        user_response = requests.get(
-            user_url,
-            headers=headers
-        )
-        
-        if user_response.status_code != 200:
-            # frappe.response["http_status_code"] = 400
-            
-            return str({"error": f"Cannot find user with email {email}", "details": user_response.json()})
-            # return f"Cannot find user with email {email}"
 
-        office_user_id = user_response.json().get("id")
+        if not user_id:
+            self._settings = frappe.get_single(M365)
+
+            # Lấy user ID từ email
+            user_url = f"https://graph.microsoft.com/v1.0/users/{email}"
+
+            
+            user_response = requests.get(
+                user_url,
+                headers=headers
+            )
+        
+            if user_response.status_code != 200:
+                # frappe.response["http_status_code"] = 400
+                
+                return str({"error": f"Cannot find user with email {email}", "details": user_response.json()})
+                # return f"Cannot find user with email {email}"
+
+            # office_user_id = user_response.json().get("id")
+            user_id = user_response.json().get("id")
+            frappe.msgprint('')
+        
+        office_user_id = user_id
+        # frappe.msgprint(user_response.text)
+
         if not office_user_id:
             # frappe.response["http_status_code"] = 400
             return str({"error": "User ID not found in the response"})
@@ -517,22 +540,26 @@ class M365Groups(Document):
             return []
         
     @frappe.whitelist()
-    def promote_member_to_m365_admin(self,email):
-        user_lookup_url = f"https://graph.microsoft.com/v1.0/users/{email}"
+    def promote_member_to_m365_admin(self,email=None,user_id=None):
+
         # Headers cho request
 
         self._settings = frappe.get_single(M365)
 
         headers = get_request_header(self._settings)
 
-        # 1. Tìm ID của user từ email
-        response = requests.get(user_lookup_url, headers=headers)
-        if response.status_code == 200:
-            user_data = response.json()
-            user_id = user_data.get("id")
-            # frappe.msgprint(f"User ID: {user_id}")
-        else:
-            return f"Email {email} not found in this tenant!"
+        if not user_id:
+            user_lookup_url = f"https://graph.microsoft.com/v1.0/users/{email}"
+            
+
+            # 1. Tìm ID của user từ email
+            response = requests.get(user_lookup_url, headers=headers)
+            if response.status_code == 200:
+                user_data = response.json()
+                user_id = user_data.get("id")
+                # frappe.msgprint(f"User ID: {user_id}")
+            else:
+                return f"Email {email} not found in this tenant!"
 
         # # 2. Thêm user vào nhóm nếu chưa có
         # add_member_url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/members/$ref"
@@ -615,7 +642,7 @@ class M365Groups(Document):
             self.save()
 
             result["sharepoint_url"] = response.get("webUrl")
-        if self.m365_group_id:
+        if self.m365_group_id and self.template == "standard":
             m365_api = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}"
             response = requests.get(m365_api,headers=headers)
 
