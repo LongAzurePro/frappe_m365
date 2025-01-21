@@ -34,9 +34,10 @@ class M365Groups(Document):
 				</p>
 			'''
             frappe.msgprint(message)
-
+    @frappe.whitelist()
     def m365_groups_info(self):
         group_info = []
+        self._settings = frappe.get_single(M365)
         headers = get_request_header(self._settings)
         url = f'{self._settings.m365_graph_url}/groups'
         groups = make_request('GET', url, headers, None)
@@ -128,8 +129,7 @@ class M365Groups(Document):
             body = {"owners@odata.bind": [f"{self._settings.m365_graph_url}/directoryObjects/{user_id}"]}
             response = make_request('PATCH', url, headers, body)
             self.create_team_for_m365_groups()
-        
-        
+            time.sleep(10)
 
     def initialize_M365_groups_services(self):
         if not self.m365_sharepoint_id or not self.m365_sharepoint_site:
@@ -349,6 +349,21 @@ class M365Groups(Document):
             else:
                 frappe.log_error("Teams Group Creation Error", response.text)
                 frappe.msgprint(response.text)
+
+                
+
+
+    @frappe.whitelist()
+    def open_msteam(self):
+        team_id = self.m365_team_id
+        self._settings = frappe.get_single(M365)
+        url = f'{self._settings.m365_graph_url}/teams/{team_id}/channels'
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+        response = make_request('GET', url, headers, None)
+        webUrl = response.json()['value'][0]['webUrl']
+        return webUrl
+
     @frappe.whitelist()
     def get_m365_members_on_server(self):
         self._settings = frappe.get_single(M365)
@@ -734,3 +749,5 @@ def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=
 
     frappe.msgprint(f"M365 Group created for {doc['name']}")
     pass
+
+

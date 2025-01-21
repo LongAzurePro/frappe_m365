@@ -12,7 +12,13 @@ frappe.ui.form.on('M365 Groups', {
 				frm.trigger('create_team');
 				frm.trigger('get_m365_members_on_server');
 				frm.trigger('sync_office_365_links');
+				if(frm.doc.m365_team_id){
+					frm.trigger('open_msteam');
+				}else{
+					frm.trigger('create_team');	
+				}			
 				frm.trigger('handle_add_employee');
+				frm.trigger('test');
 			}
 		}
 	},
@@ -83,6 +89,8 @@ frappe.ui.form.on('M365 Groups', {
 					freeze_message: "<h4>Please wait while we are connecting and mapping with M365 groups...</h4>",
 					doc: frm.doc,
 					callback: function (r) {
+						frm.set_df_property("template","read_only",1);
+						frm.refresh_field("template");
 						frm.reload_doc();
 					}
 				});
@@ -404,5 +412,41 @@ frappe.ui.form.on('M365 Groups', {
 				<button class = "btn btn-default" onclick="window.open('${frm.doc.m365_group_site}', '_blank')">Redirect to Outlook ${outlook_logo}</button>
 			`);
 		}
+	},
+	open_msteam: function(frm){
+		frm.add_custom_button(__("Open Microsoft Teams"), function(){
+		frappe.call({
+			method: "open_msteam",
+			doc: frm.doc,
+			freeze: 1,
+			freeze_message: "<h4>Please wait while we are opening Microsoft Teams...</h4>",
+			callback: function(r){
+				if(r.message){
+					frappe.msgprint(`${r.message}`)
+					window.open(r.message, "_blank");
+				}
+			}
+		})
+	});
+	},
+
+	test: function(frm){
+		frappe.call({
+			method: "m365_groups_info",
+			doc: frm.doc,
+			freeze: 1,
+			freeze_message: "<h4>Please wait while we are testing...</h4>",
+			callback: function(r){
+				if(r.message){
+					if(r.message.length === 0){
+						frm.set_value("m365_group_id", "");
+						frm.set_value("m365_team_id", "");
+						frm.save();
+						frm.refresh_field("m365_group_id");
+						frm.refresh_field("m365_team_id");
+					}
+				}
+			}
+		})
 	}
 });
