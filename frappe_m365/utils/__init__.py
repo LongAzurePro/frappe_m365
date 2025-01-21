@@ -27,13 +27,11 @@ def get_oauth_application_token(settings):
 def get_request_header(settings):
     access_token = get_oauth_token(settings)
     headers = {'Authorization': f'Bearer {access_token}'}
-    frappe.msgprint(access_token)
     return headers
 
 def get_application_request_header(settings):
     access_token = get_oauth_application_token(settings)
     headers = {'Authorization': f'Bearer {access_token}'}
-    frappe.msgprint(access_token)
     return headers
 
 #general api request

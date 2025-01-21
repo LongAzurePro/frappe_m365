@@ -34,9 +34,10 @@ class M365Groups(Document):
 				</p>
 			'''
             frappe.msgprint(message)
-
+    @frappe.whitelist()
     def m365_groups_info(self):
         group_info = []
+        self._settings = frappe.get_single(M365)
         headers = get_request_header(self._settings)
         url = f'{self._settings.m365_graph_url}/groups'
         groups = make_request('GET', url, headers, None)
@@ -117,6 +118,7 @@ class M365Groups(Document):
             headers.update(ContentType)
             body = {"owners@odata.bind": [f"{self._settings.m365_graph_url}/directoryObjects/{user_id}"]}
             response = make_request('PATCH', url, headers, body)
+            time.sleep(10)
 
     def initialize_M365_groups_services(self):
         if not self.m365_sharepoint_id or not self.m365_sharepoint_site:
@@ -281,7 +283,7 @@ class M365Groups(Document):
     def create_team_for_m365_groups(self):
         self._settings = frappe.get_single(M365)
 
-        group_id = self.m365_group_id  # Đây là ID của nhóm M365 đã tạo trước đó
+        group_id = self.m365_group_id
 
         url = f'{self._settings.m365_graph_url}/groups/{group_id}/team'
 
@@ -317,16 +319,32 @@ class M365Groups(Document):
             }
 
             response = make_request('POST', url, headers, body)
+            if response.status_code == 202:
+                url = f'{self._settings.m365_graph_url}/groups/{group_id}/team'
 
-            if response.status_code == 201:
-                frappe.msgprint(response.text)
+                headers = get_request_header(self._settings)
+                headers.update(ContentType)
 
-                response_data = response.json()
-                self.m365_team_id = response_data["id"]
-                self.save()
-                frappe.db.commit()
-                
+
+                check_response = requests.get(url, headers=headers)
+                check_response_data = check_response.json()
+                if(check_response_data.get("id")):
+                    self.m365_team_id = check_response_data["id"]
+                    self.save()
+                    frappe.db.commit()
                 frappe.msgprint('Microsoft Teams group has been created successfully.')
             else:
                 frappe.log_error("Teams Group Creation Error", response.text)
                 frappe.msgprint(response.text)
+
+
+    @frappe.whitelist()
+    def open_msteam(self):
+        team_id = self.m365_team_id
+        self._settings = frappe.get_single(M365)
+        url = f'{self._settings.m365_graph_url}/teams/{team_id}/channels'
+        headers = get_request_header(self._settings)
+        headers.update(ContentType)
+        response = make_request('GET', url, headers, None)
+        webUrl = response.json()['value'][0]['webUrl']
+        return webUrl
