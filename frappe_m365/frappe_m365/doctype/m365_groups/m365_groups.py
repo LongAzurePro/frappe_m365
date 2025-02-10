@@ -81,7 +81,6 @@ class M365Groups(Document):
         frappe.msgprint(self.mailnickname)
         self.save()
         if template == "educationClass":
-            # self._settings.connected_app = "73m034hajh"
             url = f'{self._settings.m365_graph_url}/education/classes'
             body = {
             "description": f"{self.m365_group_description}",
@@ -115,7 +114,6 @@ class M365Groups(Document):
         else:
             frappe.log_error("M365 Group Creation Error", response.text)
             frappe.msgprint(response.text)
-        # self._settings.connected_app = "vs1tbfri1a"
 
         frappe.msgprint(f"Promoting {user_id} to group Administrator.")
         time.sleep(5)
@@ -336,13 +334,19 @@ class M365Groups(Document):
 
             # response = make_request("PUT" if  else "POST", url, headers, body)
 
-            if response.status_code == 201:
-                frappe.msgprint(response.text)
+            if response.status_code == 202:
+                url = f'{self._settings.m365_graph_url}/groups/{group_id}/team'
 
-                response_data = response.json()
-                self.m365_team_id = response_data["id"]
-                self.save()
-                frappe.db.commit()
+                headers = get_request_header(self._settings)
+                headers.update(ContentType)
+
+
+                check_response = requests.get(url, headers=headers)
+                check_response_data = check_response.json()
+                if(check_response_data.get("id")):
+                    self.m365_team_id = check_response_data["id"]
+                    self.save()
+                    frappe.db.commit()
                 
                 frappe.msgprint("Microsoft Teams group has been created successfully.")
                 return "Microsoft Teams group has been created successfully."
@@ -350,19 +354,6 @@ class M365Groups(Document):
                 frappe.log_error("Teams Group Creation Error", response.text)
                 frappe.msgprint(response.text)
 
-                
-
-
-    @frappe.whitelist()
-    def open_msteam(self):
-        team_id = self.m365_team_id
-        self._settings = frappe.get_single(M365)
-        url = f'{self._settings.m365_graph_url}/teams/{team_id}/channels'
-        headers = get_request_header(self._settings)
-        headers.update(ContentType)
-        response = make_request('GET', url, headers, None)
-        webUrl = response.json()['value'][0]['webUrl']
-        return webUrl
 
     @frappe.whitelist()
     def get_m365_members_on_server(self):
@@ -390,6 +381,8 @@ class M365Groups(Document):
     def add_user_to_m365(self,email=None,user_id=None):
         # email = frappe.get_value("User", {"email": user_id}, "email")
         # URL endpoint để thêm thành viên vào nhóm
+        self._settings = frappe.get_single(M365)
+
         url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/members/$ref"
 
         headers = get_request_header(self._settings)
@@ -397,7 +390,6 @@ class M365Groups(Document):
 
 
         if not user_id:
-            self._settings = frappe.get_single(M365)
 
             # Lấy user ID từ email
             user_url = f"https://graph.microsoft.com/v1.0/users/{email}"
@@ -454,14 +446,14 @@ class M365Groups(Document):
                 self.save()
                 frappe.db.commit()
 
-            return {"success": f"User {email} added to group {self.name}"}
-            # return f"User {email} added to group {self.name}"
+            # return {"success": f"User {email} added to group {self.name}"}
+            return f"User {email} added to group {self.name}"
         else:
             # frappe.response["http_status_code"] = 400
 
             return {"error": "Failed to add user to group", "details": response.json()}
 
-            # return f"Failed to add user to group {response.text}"
+            return f"Failed to add user to group {response.text}"
 
     @frappe.whitelist()
     def add_member_to_m365_via_power_automate(self,user_id):
@@ -469,6 +461,7 @@ class M365Groups(Document):
         #Is this an innovation??? I'd think so
     
         email = frappe.get_value("User", {"email": user_id}, "email")
+        self._settings = frappe.get_single(M365)
 
         settings = frappe.get_single(M365)
 
