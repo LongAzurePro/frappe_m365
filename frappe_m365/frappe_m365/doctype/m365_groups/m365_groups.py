@@ -632,6 +632,24 @@ class M365Groups(Document):
 
         result = {}
 
+        # Lấy thông tin SharePoint site
+        sharepoint_url = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}/sites/root"
+        sharepoint_response = requests.get(sharepoint_url, headers=headers)
+        sharepoint_id = None
+        if sharepoint_response.status_code == 200:
+            sharepoint_id = sharepoint_response.json().get("id")
+            self.m365_sharepoint_id = sharepoint_id
+            self.save()
+
+        # Lấy thông tin Microsoft Teams
+        teams_url = f"https://graph.microsoft.com/v1.0/teams/{self.m365_group_id}"
+        teams_response = requests.get(teams_url, headers=headers)
+        teams_id = None
+        if teams_response.status_code == 200:
+            teams_id = teams_response.json().get("id")
+            self.m365_team_id = teams_id
+            self.save()
+
         if self.m365_team_id:
             team_api = f"https://graph.microsoft.com/v1.0/teams/{self.m365_team_id}"
             response = requests.get(team_api,headers=headers)
@@ -654,7 +672,7 @@ class M365Groups(Document):
             m365_api = f"https://graph.microsoft.com/v1.0/groups/{self.m365_group_id}"
             response = requests.get(m365_api,headers=headers)
 
-            frappe.msgprint(response.text)
+            # frappe.msgprint(response.text)
             response = response.json()
             mailnickname,company_site = response["mail"].split("@")
             m365_url = f"https://outlook.office.com/groups/{company_site}/{mailnickname}/mail"
