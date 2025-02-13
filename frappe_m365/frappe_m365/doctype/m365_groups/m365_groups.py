@@ -664,7 +664,7 @@ class M365Groups(Document):
             response = requests.get(sharepoint_api,headers=headers)
             response = response.json()
 
-            self.m365_sharepoint_name = response.get("webUrl")
+            self.m365_sharepoint_site = response.get("webUrl")
             self.save()
 
             result["sharepoint_url"] = response.get("webUrl")
