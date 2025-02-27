@@ -703,7 +703,7 @@ class M365Groups(Document):
 
 
 @frappe.whitelist()
-def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=None,*args,**kwargs):
+def create_m365_group_for_any_doc(doc,name=None,members_doctype=None,members_search_field=None,template=None,*args,**kwargs):
     """
 
     """
@@ -713,9 +713,10 @@ def create_m365_group_for_any_doc(doc,members_doctype=None,members_search_field=
     # Tạo doc M365
     group_doc = frappe.get_doc("M365 Groups",f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") if frappe.db.exists("M365 Groups", f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") else frappe.get_doc({
             "doctype":"M365 Groups",
-            "m365_group_name":f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "",
+            "m365_group_name":(f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") if not name else name,
             "m365_group_description":f"M365 Group for " + f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "",
-            "enable":True
+            "enable":True,
+            "template": template if template else "standard"
     })
     group_doc.save()
     frappe.db.commit()
