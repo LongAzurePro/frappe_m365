@@ -120,14 +120,20 @@ class M365Groups(Document):
         self.add_user_to_m365(user_id=user_id)
         self.promote_member_to_m365_admin(user_id=user_id)
 
+        
+
         if template == "educationClass":
+            time.sleep(5)
             url = f'{self._settings.m365_graph_url}/groups/{self.m365_group_id}'
             headers = get_application_request_header(self._settings)
             headers.update(ContentType)
             body = {"owners@odata.bind": [f"{self._settings.m365_graph_url}/directoryObjects/{user_id}"]}
             response = make_request('PATCH', url, headers, body)
             self.create_team_for_m365_groups()
-            time.sleep(10)
+            
+
+        self.save()
+        frappe.db.commit()
 
     def initialize_M365_groups_services(self):
         if not self.m365_sharepoint_id or not self.m365_sharepoint_site:
@@ -703,18 +709,21 @@ class M365Groups(Document):
 
 
 @frappe.whitelist()
-def create_m365_group_for_any_doc(doc,name=None,members_doctype=None,members_search_field=None,template=None,*args,**kwargs):
+def create_m365_group_for_any_doc(doc,name=None,members_doctype=None,members_search_field=None,template=None,create_team=False,*args,**kwargs):
     """
 
     """
+
     doc = eval(doc)
-    m365_members = []
+   
+    # m365_members = []
     
+    m365_name = (f"{doc['name']}" + (f" - {doc['company']}" if doc.get('company') else "")) if name == None else name
     # Tạo doc M365
-    group_doc = frappe.get_doc("M365 Groups",f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") if frappe.db.exists("M365 Groups", f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") else frappe.get_doc({
+    group_doc = frappe.get_doc("M365 Groups",doc.get('m365_group')) if frappe.db.exists("M365 Groups", doc.get('m365_group')) else frappe.get_doc({
             "doctype":"M365 Groups",
-            "m365_group_name":(f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "") if not name else name,
-            "m365_group_description":f"M365 Group for " + f"{doc['name']}" + f" - {doc['company']}" if doc.get('company') else "",
+            "m365_group_name": m365_name,
+            "m365_group_description":f"M365 Group for " + m365_name,
             "enable":True,
             "template": template if template else "standard"
     })
@@ -729,6 +738,13 @@ def create_m365_group_for_any_doc(doc,name=None,members_doctype=None,members_sea
     
     #Chạy luồng tạo nhóm M365 trên Graph Microsoft
     group_doc.run_m365_groups_flow()
+    group_doc.save()
+    frappe.db.commit()
+    if create_team:
+        group_doc.create_team_for_m365_groups()
+    
+    group_doc.sync_office_365_links()
+
     group_doc.save()
     frappe.db.commit()
 
