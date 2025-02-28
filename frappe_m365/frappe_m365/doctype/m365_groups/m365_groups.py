@@ -116,14 +116,14 @@ class M365Groups(Document):
             frappe.msgprint(response.text)
 
         frappe.msgprint(f"Promoting {user_id} to group Administrator.")
-        time.sleep(5)
+        time.sleep(3)
         self.add_user_to_m365(user_id=user_id)
         self.promote_member_to_m365_admin(user_id=user_id)
 
         
 
         if template == "educationClass":
-            time.sleep(5)
+            time.sleep(10)
             url = f'{self._settings.m365_graph_url}/groups/{self.m365_group_id}'
             headers = get_application_request_header(self._settings)
             headers.update(ContentType)
@@ -138,7 +138,7 @@ class M365Groups(Document):
     def initialize_M365_groups_services(self):
         if not self.m365_sharepoint_id or not self.m365_sharepoint_site:
             # added sleep time so the group is properly initialize in MS365 for first itme
-            time.sleep(10)
+            time.sleep(5)
 
         msg = '''
 				<p>The mapping of Frappe modules > M365 Group has started.
@@ -308,6 +308,13 @@ class M365Groups(Document):
 
         check_response = requests.get(url, headers=headers)
         check_response_data = check_response.json()
+
+        if len(self.get_m365_members_on_server()) == 0:
+            user_id = self.get_user_info()
+            self.add_user_to_m365(user_id=user_id)
+            self.promote_member_to_m365_admin(user_id=user_id)
+            time.sleep(10)
+
         if(check_response_data.get("id")):
             frappe.msgprint(f'Team for this M365 Group exists(ID: {check_response_data["id"]})')
             self.m365_team_id = check_response_data["id"]
